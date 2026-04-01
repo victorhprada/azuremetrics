@@ -175,6 +175,8 @@ AZURE_DEVOPS_PAT=meu-pat
 
 - **Nunca** faça commit do `.env` ou inclua chaves diretamente no código
 - O `.gitignore` já ignora `.env` e os arquivos HTML gerados
+- O workflow **Secret scan (Gitleaks)** (`.github/workflows/gitleaks.yml`) roda em push/PR e ajuda a bloquear commits com segredos acidentais
+- Localmente: `brew install gitleaks` e `gitleaks detect --source . --verbose`
 - Use PATs com escopo mínimo (princípio do menor privilégio)
 - Faça rotação periódica de PATs e API Keys
 - Se uma chave foi exposta, **revogue e gere uma nova imediatamente**
@@ -185,6 +187,9 @@ AZURE_DEVOPS_PAT=meu-pat
 
 ```
 azuremetrics/
+├── .github/
+│   └── workflows/
+│       └── gitleaks.yml  # varredura de segredos no CI
 ├── app.py              # Servidor Flask (/ e /metrics)
 ├── main.py             # Relatório de métricas (CLI ou via Flask)
 ├── status_page.py      # Status Page (CLI ou via Flask)
