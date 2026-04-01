@@ -137,8 +137,22 @@ Acesse `http://localhost:5000` — as duas páginas já estão disponíveis com 
 
 1. Suba o código para o GitHub
 2. Acesse [vercel.com](https://vercel.com) → New Project → importe o repositório
-3. Configure as variáveis de ambiente no painel: `Settings → Environment Variables`
-4. Clique em Deploy
+3. **Antes ou depois do primeiro deploy**, abra o projeto → **Settings → Environment Variables** e crie **as mesmas chaves do seu `.env` local** (o arquivo `.env` **não** sobe no Git e a Vercel **não** lê o `.env` da sua máquina):
+   - `AZURE_DEVOPS_PAT`
+   - `AZURE_DEVOPS_ORGANIZACAO`
+   - `AZURE_DEVOPS_PROJETO`
+   - `AZURE_DEVOPS_TEAM`
+   - (opcional) `GEMINI_API_KEY`, `AZURE_DEVOPS_NUM_SPRINTS`, `STATUS_PAGE_TITLE`, `OPEN_BROWSER`
+4. Para cada variável, marque os ambientes em que ela vale (**Production**, **Preview**, **Development**). Se marcar só Production, deploys de branch (Preview) podem falhar.
+5. **Redeploy** após salvar: **Deployments** → menu **⋯** no último deploy → **Redeploy** (ou faça um commit novo).
+
+Via CLI (na pasta do projeto), você pode adicionar uma a uma, por exemplo:
+
+```bash
+vercel env add AZURE_DEVOPS_PAT
+```
+
+Repita para as demais; depois `vercel --prod` ou redeploy no painel.
 
 A Vercel detecta o `vercel.json` automaticamente. A URL gerada pode ser compartilhada com toda a empresa — sem VPN, sem login, sem configuração adicional.
 

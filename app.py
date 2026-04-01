@@ -24,6 +24,8 @@ from status_page import (
     render_page,
     ORGANIZACAO,
     PAT,
+    PROJETO,
+    TEAM,
 )
 from main import (
     find_team,
@@ -37,6 +39,28 @@ from main import (
 
 app = Flask(__name__)
 
+_AZURE_KEYS = (
+    ("AZURE_DEVOPS_PAT", lambda: PAT),
+    ("AZURE_DEVOPS_ORGANIZACAO", lambda: ORGANIZACAO),
+    ("AZURE_DEVOPS_PROJETO", lambda: PROJETO),
+    ("AZURE_DEVOPS_TEAM", lambda: TEAM),
+)
+
+
+def _azure_env_error_msg() -> str | None:
+    missing = [name for name, get in _AZURE_KEYS if not (get() or "").strip()]
+    if not missing:
+        return None
+    lines = "\n".join(f"  - {k}" for k in missing)
+    return (
+        "Erro: variáveis de ambiente não configuradas.\n\n"
+        f"Faltando ou vazias:\n{lines}\n\n"
+        "Na Vercel: Project → Settings → Environment Variables.\n"
+        "Adicione cada nome acima (mesmos nomes do .env local).\n"
+        "Marque Production, Preview e Development conforme o ambiente.\n"
+        "Depois: Deployments → … no último deploy → Redeploy."
+    )
+
 
 def _err(msg: str, status: int = 500) -> Response:
     return Response(
@@ -48,12 +72,9 @@ def _err(msg: str, status: int = 500) -> Response:
 
 @app.route("/")
 def index():
-    if not PAT or not ORGANIZACAO:
-        return _err(
-            "Erro: variáveis de ambiente não configuradas.\n\n"
-            "Verifique: AZURE_DEVOPS_PAT, AZURE_DEVOPS_ORGANIZACAO, "
-            "AZURE_DEVOPS_PROJETO, AZURE_DEVOPS_TEAM"
-        )
+    env_err = _azure_env_error_msg()
+    if env_err:
+        return _err(env_err)
     try:
         sprint = fetch_current_sprint()
         items  = fetch_items(sprint["path"])
@@ -70,12 +91,9 @@ def index():
 
 @app.route("/metrics")
 def metrics_page():
-    if not PAT or not ORGANIZACAO:
-        return _err(
-            "Erro: variáveis de ambiente não configuradas.\n\n"
-            "Verifique: AZURE_DEVOPS_PAT, AZURE_DEVOPS_ORGANIZACAO, "
-            "AZURE_DEVOPS_PROJETO, AZURE_DEVOPS_TEAM"
-        )
+    env_err = _azure_env_error_msg()
+    if env_err:
+        return _err(env_err)
     try:
         team_name        = find_team()
         used_team, all_iters = fetch_iterations(team_name)
