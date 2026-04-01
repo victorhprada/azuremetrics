@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block title %}DevOps Metrics · {{ projeto }}{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+h1 { font-size:26px; font-weight:700; letter-spacing:-0.5px }
+.sub { color:var(--muted); font-size:13px; margin-top:4px; margin-bottom:2rem }
+.note { font-size:11px; color:var(--muted); background:var(--surface-2); border:1px solid var(--border); border-radius:8px; padding:8px 12px; margin-bottom:1.5rem }
+.grid-5 { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:1.5rem }
+.card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.25rem }
+.card-label { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-bottom:6px }
+.card-value { font-size:28px; font-weight:700 }
+.card-sub { font-size:11px; color:var(--muted); margin-top:3px }
+.accent { color:var(--accent) } .green { color:var(--green) } .red { color:var(--red) }
+.amber { color:var(--amber) } .blue { color:var(--blue) } .muted { color:var(--muted) } .orange { color:var(--orange) }
+.section { margin-bottom:2rem }
+.section-title { font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:1rem; padding-bottom:6px; border-bottom:1px solid var(--border) }
+.charts-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem }
+@media(max-width:640px) { .charts-row { grid-template-columns:1fr } }
+.chart-box { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.25rem }
+.chart-box h3 { font-size:13px; font-weight:600; margin-bottom:1rem; color:var(--text) }
+.canvas-wrap { position:relative; width:100% }
+.status-list { display:flex; flex-direction:column; gap:8px }
+.status-row { display:flex; align-items:center; gap:8px; font-size:13px }
+.status-name { min-width:160px; color:var(--muted) }
+.bar-track { flex:1; height:4px; background:var(--border); border-radius:2px }
+.bar-fill { height:4px; border-radius:2px }
+.status-n { min-width:32px; text-align:right; font-weight:600 }
+table { width:100%; border-collapse:collapse; font-size:13px }
+th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); padding:6px 10px; border-bottom:1px solid var(--border) }
+td { padding:8px 10px; border-bottom:1px solid var(--border) }
+tr:last-child td { border-bottom:none }
+.badge { display:inline-block; font-size:11px; padding:2px 8px; border-radius:20px; font-weight:500 }
+.badge-test  { background:#2a2035; color:var(--amber) }
+.badge-ready { background:#1e2a1e; color:var(--green) }
+.badge-active { background:#1e2035; color:var(--blue) }
+.badge-scope  { background:#2a1a10; color:var(--orange) }
+.badge-other  { background:#252525; color:var(--muted) }
+.footer { margin-top:2rem; font-size:11px; color:var(--muted); text-align:center }
+.dimmed { color:var(--muted) }
+.story-block { background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--border); border-radius:12px; padding:1.25rem; margin-bottom:1rem }
+.story-block.story-positive { border-left-color:var(--green) }
+.story-block.story-warning  { border-left-color:var(--amber) }
+.story-block.story-action   { border-left-color:var(--accent) }
+.story-title { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:8px; font-weight:600 }
+.story-block p  { color:var(--text); line-height:1.7; font-size:14px }
+.story-block ul { padding-left:1.2rem; color:var(--text); line-height:1.9; font-size:14px }
+.story-block strong { color:var(--accent) }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<h1>{{ projeto }} <span style="font-weight:400;font-size:18px;color:var(--muted)">/ {{ team }}</span></h1>
+<div class="sub">Gerado em {{ gerado }} · {{ num_sprints }} sprint(s) · {{ total_items }} items (User Story + Bug)</div>
+
+{{ cycle_note | safe }}
+
+<div class="section">
+  <div class="section-title">Narrativa da sprint</div>
+  {{ storytelling | safe }}
+</div>
+
+<div class="section">
+  <div class="section-title">Visão geral</div>
+  <div class="grid-5">
+    <div class="card">
+      <div class="card-label">Items na sprint</div>
+      <div class="card-value accent">{{ total_items }}</div>
+      <div class="card-sub">{{ total_done }} concluídos ({{ pct_done }}%)</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Scope increase</div>
+      <div class="card-value orange">{{ scope_count }}</div>
+      <div class="card-sub">adicionados após início · {{ scope_done }} concluídos</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Bugs em aberto</div>
+      <div class="card-value red">{{ open_bugs }}</div>
+      <div class="card-sub">{{ all_bugs }} total · {{ bugs_closed_total }} fechados</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Taxa resolução bugs</div>
+      <div class="card-value amber">{{ bug_resolution }}%</div>
+      <div class="card-sub">{{ bugs_closed_total }} de {{ all_bugs }} fechados</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Lead time médio</div>
+      <div class="card-value {{ cycle_color }}">{{ avg_cycle }}</div>
+      <div class="card-sub">mediana {{ med_cycle }} · p85 {{ p85_cycle }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Scope increase — itens adicionados após início da sprint</div>
+  <div class="chart-box" style="overflow-x:auto">
+    <table><thead><tr><th>ID</th><th>Tipo</th><th>Título</th><th>Adicionado em</th><th>Estado</th></tr></thead>
+    <tbody id="scope-tbody"></tbody></table>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Throughput por sprint</div>
+  <div class="chart-box">
+    <h3>Items concluídos vs total na sprint</h3>
+    <div class="canvas-wrap" style="height:220px"><canvas id="c-thru"></canvas></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Distribuição por status</div>
+  <div class="chart-box">
+    <div class="status-list" id="status-list"></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Bugs</div>
+  <div class="charts-row">
+    <div class="chart-box">
+      <h3>Abertos vs fechados por sprint</h3>
+      <div class="canvas-wrap" style="height:220px"><canvas id="c-bugs"></canvas></div>
+    </div>
+    <div class="chart-box">
+      <h3>Bugs em aberto</h3>
+      <div style="overflow-x:auto">
+        <table><thead><tr><th>ID</th><th>Título</th><th>Estado</th></tr></thead>
+        <tbody id="bugs-tbody"></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Lead / Cycle time {{ cycle_disclaimer }}</div>
+  <div class="charts-row">
+    <div class="chart-box"><h3>Lead time médio por sprint (dias)</h3><div class="canvas-wrap" style="height:200px"><canvas id="c-ct"></canvas></div></div>
+    <div class="chart-box"><h3>Distribuição por faixa (dias)</h3><div class="canvas-wrap" style="height:200px"><canvas id="c-dist"></canvas></div></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Throughput por responsável</div>
+  <div class="chart-box">
+    <div class="status-list" id="assignee-list"></div>
+  </div>
+</div>
+
+<div class="footer">Gerado por azure_devops_metrics.py · {{ gerado }}</div>
+
+<script>
+const DATA = {{ data_json | safe }};
+const C = {acc:'#7c6fff',grn:'#3ecf8e',red:'#f04a4a',amb:'#f0a030',blu:'#4a9cf0',mut:'#6b6b80'};
+const GRID = {color:'#2a2a35'};
+const TICK = {color:'#6b6b80'};
+
+// Scope table
+const st = document.getElementById('scope-tbody');
+const allScope = DATA.scope_data.flatMap(s=>s.scope_added);
+if(allScope.length===0){
+  st.innerHTML='<tr><td colspan="5" style="color:#6b6b80">Nenhum item adicionado após o início da sprint.</td></tr>';
+}else{
+  allScope.forEach(item=>{
+    const tag = item.done
+      ? '<span class="badge badge-ready">Concluído</span>'
+      : '<span class="badge badge-scope">Em aberto</span>';
+    st.innerHTML+=`<tr><td class="dimmed">#${item.id}</td><td>${item.type==='Bug'?'🐛':'📋'} ${item.type}</td><td>${item.title}</td><td style="color:#f97316;white-space:nowrap">${item.added_date}</td><td>${tag}</td></tr>`;
+  });
+}
+
+// Throughput
+new Chart(document.getElementById('c-thru'),{
+  type:'bar',
+  data:{labels:DATA.sprints.map(s=>s.name),datasets:[
+    {label:'Total',data:DATA.sprints.map(s=>s.total),backgroundColor:'rgba(74,156,240,0.2)',borderColor:C.blu,borderWidth:1,borderRadius:4},
+    {label:'Concluídos',data:DATA.sprints.map(s=>s.done),backgroundColor:C.grn,borderRadius:4},
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:C.mut,font:{size:11}}}},scales:{x:{grid:GRID,ticks:TICK},y:{grid:GRID,ticks:TICK,beginAtZero:true}}}
+});
+
+// Status
+const sc={Closed:C.grn,Done:C.grn,Resolved:C.grn,Test:C.amb,Ready:C.blu,Active:'#a78bfa',Review:'#f472b6',New:C.mut};
+const maxS=Math.max(...Object.values(DATA.state_map),1);
+const sl=document.getElementById('status-list');
+Object.entries(DATA.state_map).forEach(([s,c])=>{
+  const color=sc[s]||C.mut;
+  sl.innerHTML+=`<div class="status-row"><span class="status-name">${s}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round(c/maxS*100)}%;background:${color}"></div></div><span class="status-n" style="color:${color}">${c}</span><span style="font-size:11px;color:${C.mut};min-width:36px;text-align:right">${Math.round(c/DATA.total_items*100)}%</span></div>`;
+});
+
+// Bugs
+new Chart(document.getElementById('c-bugs'),{
+  type:'bar',
+  data:{labels:DATA.sprints.map(s=>s.name),datasets:[
+    {label:'Abertos',data:DATA.sprints.map(s=>s.bugs_open),backgroundColor:C.red,borderRadius:4},
+    {label:'Fechados',data:DATA.sprints.map(s=>s.bugs_closed),backgroundColor:C.grn,borderRadius:4},
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:C.mut,font:{size:11}}}},scales:{x:{grid:GRID,ticks:TICK},y:{grid:GRID,ticks:TICK,beginAtZero:true}}}
+});
+const tb=document.getElementById('bugs-tbody');
+const bc=s=>({'Test':'badge-test','Ready':'badge-ready','Active':'badge-active'}[s]||'badge-other');
+DATA.open_bugs_list.length===0
+  ? tb.innerHTML='<tr><td colspan="3" style="color:#6b6b80">Nenhum bug em aberto</td></tr>'
+  : DATA.open_bugs_list.forEach(b=>{tb.innerHTML+=`<tr><td class="dimmed">#${b.id}</td><td>${b.title}</td><td><span class="badge ${bc(b.state)}">${b.state}</span></td></tr>`;});
+
+// Cycle time
+new Chart(document.getElementById('c-ct'),{
+  type:'bar',
+  data:{labels:DATA.sprints.map(s=>s.name),datasets:[{label:'Média (dias)',data:DATA.sprints.map(s=>s.avg_cycle||null),backgroundColor:C.amb,borderRadius:4}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:GRID,ticks:TICK},y:{grid:GRID,ticks:TICK,beginAtZero:true}}}
+});
+new Chart(document.getElementById('c-dist'),{
+  type:'bar',
+  data:{labels:Object.keys(DATA.buckets),datasets:[{label:'Items',data:Object.values(DATA.buckets),backgroundColor:['#9FE1CB','#5DCAA5','#1D9E75','#0F6E56','#085041'],borderRadius:4}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:TICK},y:{grid:GRID,ticks:TICK,beginAtZero:true}}}
+});
+
+// Assignees
+const al=document.getElementById('assignee-list');
+const maxA=Math.max(...Object.values(DATA.assignee_map).map(v=>v.total),1);
+Object.entries(DATA.assignee_map).slice(0,20).forEach(([name,v])=>{
+  const pct=v.total>0?Math.round(v.done/v.total*100):0;
+  al.innerHTML+=`<div class="status-row"><span class="status-name">${name}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round(v.total/maxA*100)}%;background:${C.acc}"></div></div><span class="status-n accent">${v.done}</span><span style="font-size:11px;color:${C.mut};min-width:80px;text-align:right">/ ${v.total} (${pct}%)</span></div>`;
+});
+</script>
+
+{% endblock %}

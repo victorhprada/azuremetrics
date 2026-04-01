@@ -1,38 +1,66 @@
-# Azure DevOps Metrics Report
+# DevOps Dashboard
 
-> Gere relatórios completos de sprint em segundos — sem dashboards, sem configurações complexas. Só Python e suas variáveis de ambiente.
+O Azure DevOps é uma ferramenta poderosa — mas só para quem tem acesso a ela.
+
+Times de desenvolvimento vivem com esse atrito todo dia: o restante da empresa quer saber o que está sendo entregue, qual o status das demandas, se o time está saudável — mas não tem como ver. Criar um relatório manualmente a cada sprint consome tempo, fica desatualizado em horas e ainda exige que quem recebe entenda o vocabulário técnico da ferramenta.
+
+Este projeto resolve isso automaticamente.
 
 ---
 
-## O que este projeto faz
+## As duas dores que resolvemos
 
-Conecta à API do Azure DevOps e gera automaticamente um relatório HTML rico com as métricas mais importantes do seu time de desenvolvimento:
+**1. Falta de visibilidade para quem não usa o Azure DevOps**
+
+Stakeholders, produto, gestão e outras áreas precisam saber o que o time está fazendo — mas não têm acesso ao Azure DevOps e não sabem navegar nele. O resultado é uma cadeia de perguntas, prints de tela e reuniões que poderiam ser evitadas.
+
+**Solução:** uma Status Page pública com o kanban da sprint atual, datas de início e fim, progresso e busca por demanda — atualizada automaticamente, sem login, sem treinamento.
+
+**2. Falta de métricas consolidadas para o próprio time**
+
+Montar um relatório de sprint com throughput, scope increase, cycle time e análise de bugs manualmente é trabalhoso e propenso a erro. E ainda precisa de alguém pra interpretar os dados e transformar em narrativa.
+
+**Solução:** um Relatório de Métricas gerado em segundos a partir da API do Azure DevOps, com gráficos interativos e narrativa automática em português via Google Gemini.
+
+---
+
+## O que o projeto entrega
+
+Dois dashboards acessíveis pelo mesmo servidor, com navegação integrada e visual padronizado:
+
+### Status Page `/`
+Visão do dia a dia para toda a empresa.
+
+| O que mostra | Para quem |
+|---|---|
+| Sprint atual com datas de início e fim | Qualquer pessoa da empresa |
+| Progresso da sprint (tempo e itens concluídos) | Gestão, produto, stakeholders |
+| Kanban: A Fazer / Em Andamento / Concluído | Time e liderança |
+| Busca por título, #ID ou responsável | Qualquer pessoa |
+
+### Relatório de Métricas `/metrics`
+Visão analítica para o time e liderança técnica.
 
 | Métrica | O que mede |
 |---|---|
 | **Throughput** | Itens entregues por sprint |
-| **Bugs abertos / fechados** | Saúde da qualidade do sprint |
 | **Scope Increase** | Itens adicionados após o início da sprint |
-| **Lead Time / Cycle Time** | Velocidade de entrega dos itens |
-| **Narrativa automática** | Storytelling gerado pelo Google Gemini (opcional) |
-
-O relatório é salvo como `relatorio_devops.html` e pode ser aberto diretamente no navegador — sem dependência de servidor, sem login adicional.
+| **Bugs abertos / fechados** | Saúde da qualidade |
+| **Lead Time / Cycle Time** | Velocidade de entrega (mediana e P85) |
+| **Narrativa automática** | Análise em português gerada pelo Google Gemini |
 
 ---
 
 ## Como funciona
 
 ```
-.env  ──►  main.py  ──►  Azure DevOps API  ──►  relatorio_devops.html
-              │
-              └──►  Google Gemini API  (opcional — narrativa automática)
+.env
+ ├── Azure DevOps API ──► Status Page     (/)
+ └── Azure DevOps API ──► Relatório       (/metrics)
+                               └── Gemini API  (narrativa — opcional)
 ```
 
-1. O script lê suas credenciais do `.env`
-2. Consulta a API do Azure DevOps para buscar sprints, work items e métricas
-3. Calcula throughput, scope increase, lead/cycle time e bugs
-4. (Opcional) Envia os dados ao Gemini para gerar uma narrativa em linguagem natural
-5. Salva tudo em um único arquivo HTML autocontido
+Tudo sobe com um único comando. O servidor busca os dados em tempo real a cada acesso.
 
 ---
 
@@ -40,7 +68,7 @@ O relatório é salvo como `relatorio_devops.html` e pode ser aberto diretamente
 
 - Python 3.10+
 - Acesso a um projeto no Azure DevOps
-- PAT (Personal Access Token) com permissão de leitura
+- PAT com permissão de leitura (`Work Items` e `Project and Team`)
 - (Opcional) Chave da API do Google Gemini para narrativa automática
 
 ---
@@ -64,48 +92,61 @@ source .venv/bin/activate       # Linux/macOS
 pip install -r requirements.txt
 ```
 
-### 3. Configure suas variáveis de ambiente
+### 3. Configure o `.env`
 
 ```bash
 cp .env.example .env
 ```
 
-Edite o `.env` com os dados do seu time:
-
 ```env
 # Azure DevOps — obrigatório
-AZURE_DEVOPS_ORGANIZACAO=nome-da-sua-org     # ex: contoso
-AZURE_DEVOPS_PROJETO=nome-do-projeto         # ex: MeuProjeto
-AZURE_DEVOPS_TEAM=nome-do-time               # ex: Time Alpha
-AZURE_DEVOPS_PAT=seu-pat-aqui                # Personal Access Token
+AZURE_DEVOPS_ORGANIZACAO=nome-da-sua-org
+AZURE_DEVOPS_PROJETO=nome-do-projeto
+AZURE_DEVOPS_TEAM=nome-do-time
+AZURE_DEVOPS_PAT=seu-pat-aqui
 
-# Quantas sprints analisar (padrão: 1)
+# Quantas sprints analisar no relatório de métricas (padrão: 1)
 AZURE_DEVOPS_NUM_SPRINTS=3
 
-# Google Gemini — opcional (narrativa automática)
+# Google Gemini — opcional (narrativa automática no relatório)
 GEMINI_API_KEY=
 
-# Abrir o relatório no navegador ao finalizar
+# Abrir no navegador ao gerar arquivos HTML locais
 OPEN_BROWSER=true
+
+# Título exibido na Status Page
+STATUS_PAGE_TITLE=Status da Sprint — Meu Time
 ```
 
-> **Onde criar o PAT?** Azure DevOps → User Settings → Personal Access Tokens → New Token. Permissões necessárias: `Work Items (Read)` e `Project and Team (Read)`.
+> **Onde criar o PAT?** Azure DevOps → User Settings → Personal Access Tokens → New Token.
+> Permissões mínimas: `Work Items (Read)` e `Project and Team (Read)`.
 
 > **Chave gratuita do Gemini:** https://aistudio.google.com/app/apikey
 
-### 4. Execute
+### 4. Suba o servidor
 
 ```bash
-python main.py
+python app.py
 ```
 
-O relatório `relatorio_devops.html` será gerado na pasta do projeto e aberto automaticamente no navegador (se `OPEN_BROWSER=true`).
+Acesse `http://localhost:5000` — as duas páginas já estão disponíveis com navegação entre elas.
+
+---
+
+## Deploy na Vercel (hospedagem gratuita)
+
+1. Suba o código para o GitHub
+2. Acesse [vercel.com](https://vercel.com) → New Project → importe o repositório
+3. Configure as variáveis de ambiente no painel: `Settings → Environment Variables`
+4. Clique em Deploy
+
+A Vercel detecta o `vercel.json` automaticamente. A URL gerada pode ser compartilhada com toda a empresa — sem VPN, sem login, sem configuração adicional.
 
 ---
 
 ## Replicando para outros times
 
-Nenhuma linha de código precisa mudar. Cada time configura apenas seu próprio `.env`:
+Nenhuma linha de código precisa mudar. Cada time usa seu próprio `.env`:
 
 ```env
 AZURE_DEVOPS_ORGANIZACAO=minha-org
@@ -114,24 +155,31 @@ AZURE_DEVOPS_TEAM=meu-time
 AZURE_DEVOPS_PAT=meu-pat
 ```
 
-Depois é só rodar `python main.py`. Simples assim.
-
 ---
 
 ## Segurança
 
 - **Nunca** faça commit do `.env` ou inclua chaves diretamente no código
-- O `.gitignore` já ignora `.env` e o relatório gerado
+- O `.gitignore` já ignora `.env` e os arquivos HTML gerados
 - Use PATs com escopo mínimo (princípio do menor privilégio)
 - Faça rotação periódica de PATs e API Keys
 - Se uma chave foi exposta, **revogue e gere uma nova imediatamente**
 
 ---
 
-## Dependências
+## Estrutura do projeto
 
 ```
-requests            — chamadas à API do Azure DevOps
-google-generativeai — narrativa automática via Gemini (opcional)
-python-dotenv       — carregamento do .env
+azuremetrics/
+├── app.py              # Servidor Flask (/ e /metrics)
+├── main.py             # Relatório de métricas (CLI ou via Flask)
+├── status_page.py      # Status Page (CLI ou via Flask)
+├── azure_client.py     # Cliente HTTP compartilhado para a API do Azure DevOps
+├── templates/
+│   ├── base.html       # Layout base: design tokens, navegação
+│   ├── status_page.html
+│   └── metrics.html
+├── .env.example
+├── requirements.txt
+└── vercel.json
 ```

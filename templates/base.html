@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}DevOps Dashboard{% endblock %}</title>
+{% block extra_head %}{% endblock %}
+<style>
+  /* ── Design tokens ── */
+  :root {
+    --bg:        #0f0f13;
+    --surface:   #18181f;
+    --surface-2: #1e1e28;
+    --border:    #2a2a35;
+    --text:      #e8e8f0;
+    --muted:     #6b6b80;
+    --accent:    #7c6fff;
+    --green:     #3ecf8e;
+    --red:       #f04a4a;
+    --amber:     #f0a030;
+    --blue:      #4a9cf0;
+    --orange:    #f97316;
+    --nav-h:     52px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    padding-top: var(--nav-h);
+  }
+
+  /* ── Navigation ── */
+  .nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: var(--nav-h);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 1.5rem;
+    gap: 1.5rem;
+    z-index: 100;
+  }
+  .nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .nav-brand-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+  .nav-divider { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; }
+  .nav-links { display: flex; gap: 2px; }
+  .nav-link {
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--muted);
+    text-decoration: none;
+    transition: background .15s, color .15s;
+    white-space: nowrap;
+  }
+  .nav-link:hover  { background: var(--surface-2); color: var(--text); }
+  .nav-link.active { background: var(--surface-2); color: var(--text); font-weight: 500; }
+
+  /* ── Page wrapper ── */
+  .page { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="nav-brand">
+    <span class="nav-brand-dot"></span>
+    DevOps Dashboard
+  </a>
+  <div class="nav-divider"></div>
+  <div class="nav-links">
+    <a href="/"        class="nav-link {% if active_page == 'status'  %}active{% endif %}">Status da Sprint</a>
+    <a href="/metrics" class="nav-link {% if active_page == 'metrics' %}active{% endif %}">Relatório de Métricas</a>
+  </div>
+</nav>
+
+<main class="page">
+  {% block content %}{% endblock %}
+</main>
+
+</body>
+</html>

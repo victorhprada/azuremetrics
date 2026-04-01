@@ -18,7 +18,6 @@ Chave gratuita do Gemini:
     https://aistudio.google.com/app/apikey
 """
 
-import base64
 import importlib
 import json
 import os
@@ -38,6 +37,11 @@ try:
     load_dotenv()
 except ImportError:
     pass
+
+from pathlib import Path
+
+from azure_client import AzureClient
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 try:
     genai = importlib.import_module("google.generativeai")
@@ -64,34 +68,12 @@ ARQUIVO_HTML = "relatorio_devops.html"
 TIPOS_BOARD = ("User Story", "Bug")
 # ─────────────────────────────────────────────
 
+client = AzureClient(ORGANIZACAO, PROJETO, TEAM, PAT)
 
-def headers():
-    token = base64.b64encode(f":{PAT}".encode()).decode()
-    return {"Authorization": f"Basic {token}", "Content-Type": "application/json"}
-
-
-def proj_api(path):
-    return f"https://dev.azure.com/{ORGANIZACAO}/{PROJETO}/_apis/{path}"
-
-
-def team_api(team, path):
-    return f"https://dev.azure.com/{ORGANIZACAO}/{PROJETO}/{requests.utils.quote(team)}/_apis/{path}"
-
-
-def org_api(path):
-    return f"https://dev.azure.com/{ORGANIZACAO}/_apis/{path}"
-
-
-def get(url):
-    r = requests.get(url, headers=headers())
-    r.raise_for_status()
-    return r.json()
-
-
-def post(url, body):
-    r = requests.post(url, headers=headers(), json=body)
-    r.raise_for_status()
-    return r.json()
+_jinja = Environment(
+    loader=FileSystemLoader(Path(__file__).parent / "templates"),
+    autoescape=select_autoescape(["html"]),
+)
 
 
 def is_done(state):
@@ -126,7 +108,7 @@ def find_team():
     if team_name:
         return team_name
     try:
-        data = get(org_api(f"projects/{PROJETO}/teams?api-version=7.1"))
+        data = client.get(client.org_url(f"projects/{PROJETO}/teams?api-version=7.1"))
         teams = data.get("value", [])
         if teams:
             return teams[0]["name"]
@@ -142,10 +124,10 @@ def fetch_iterations(team_name):
     for tc in candidates:
         for timeframe in ["past", None]:
             try:
-                url = team_api(tc, "work/teamsettings/iterations?api-version=7.1")
+                url = client.team_url("work/teamsettings/iterations?api-version=7.1", team=tc)
                 if timeframe:
                     url += f"&$timeframe={timeframe}"
-                data = get(url)
+                data = client.get(url)
                 iters = [i for i in (data.get("value") or [])
                          if i.get("attributes", {}).get("startDate")]
                 if iters:
@@ -173,7 +155,7 @@ def fetch_work_items(iterations):
             f"ORDER BY [System.CreatedDate] ASC"
         )
     }
-    data = post(proj_api("wit/wiql?api-version=7.1"), wiql)
+    data = client.post(client.proj_url("wit/wiql?api-version=7.1"), wiql)
     ids = [w["id"] for w in (data.get("workItems") or [])]
     if not ids:
         return []
@@ -187,11 +169,11 @@ def fetch_work_items(iterations):
     items = []
     for i in range(0, len(ids), 200):
         chunk = ids[i:i + 200]
-        url = proj_api(
+        url = client.proj_url(
             f"wit/workitems?ids={','.join(map(str, chunk))}"
             f"&fields={fields}&api-version=7.1"
         )
-        batch = get(url)
+        batch = client.get(url)
         items.extend(batch.get("value") or [])
         print(f"  Work items carregados: {len(items)}/{len(ids)}")
     return items
@@ -422,7 +404,7 @@ def generate_storytelling(metrics, team_name):
 
 # ── 7. Gerar HTML ─────────────────────────────────────────────────────────────
 
-HTML_TEMPLATE = """<!DOCTYPE html>
+_REMOVED_START = """<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -657,42 +639,39 @@ Object.entries(DATA.assignee_map).slice(0,20).forEach(([name,v])=>{{
 </body>
 </html>
 """
+del _REMOVED_START  # template migrado para templates/metrics.html
 
 
-def generate_html(team_name, iterations, metrics, storytelling_html):
-    sc = metrics["scope_data"][0] if metrics["scope_data"] else {}
-    scope_count       = sc.get("scope_count", 0)
-    scope_done        = sc.get("scope_done",  0)
-    bugs_closed_total = sum(s["bugs_closed"] for s in metrics["sprints"])
-    bug_resolution    = round(bugs_closed_total / metrics["all_bugs"] * 100) if metrics["all_bugs"] else 0
-    pct_done          = round(metrics["total_done"] / metrics["total_items"] * 100) if metrics["total_items"] else 0
+def generate_html(team_name, iterations, metrics, storytelling_html) -> str:
+    """Renderiza o relatório de métricas via template Jinja2 e retorna o HTML."""
+    sc                = metrics["scope_data"][0] if metrics["scope_data"] else {}
     has_cycle         = metrics["has_cycle"]
+    bugs_closed_total = sum(s["bugs_closed"] for s in metrics["sprints"])
 
-    html = HTML_TEMPLATE.format(
-        projeto=PROJETO,
-        team=team_name,
-        gerado=datetime.now().strftime("%d/%m/%Y %H:%M"),
-        num_sprints=len(iterations),
-        total_items=metrics["total_items"],
-        total_done=metrics["total_done"],
-        pct_done=pct_done,
-        scope_count=scope_count,
-        scope_done=scope_done,
-        open_bugs=metrics["open_bugs"],
-        all_bugs=metrics["all_bugs"],
-        avg_cycle=f"{metrics['avg_cycle']}d" if has_cycle else "—",
-        med_cycle=f"{metrics['med_cycle']}d" if has_cycle else "—",
-        p85_cycle=f"{metrics['p85_cycle']}d" if has_cycle else "—",
-        cycle_color="amber" if has_cycle else "muted",
-        cycle_disclaimer="· baseado em CreatedDate → ChangedDate (itens Closed)" if has_cycle else "",
-        cycle_note="" if has_cycle else '<div class="note">⚠️ Lead time não calculado: nenhum item Closed tinha datas suficientes.</div>',
-        bugs_closed_total=bugs_closed_total,
-        bug_resolution=bug_resolution,
-        storytelling=storytelling_html,
-        data_json=json.dumps(metrics, ensure_ascii=False),
+    return _jinja.get_template("metrics.html").render(
+        active_page       = "metrics",
+        projeto           = PROJETO,
+        team              = team_name,
+        gerado            = datetime.now().strftime("%d/%m/%Y %H:%M"),
+        num_sprints       = len(iterations),
+        total_items       = metrics["total_items"],
+        total_done        = metrics["total_done"],
+        pct_done          = round(metrics["total_done"] / metrics["total_items"] * 100) if metrics["total_items"] else 0,
+        scope_count       = sc.get("scope_count", 0),
+        scope_done        = sc.get("scope_done",  0),
+        open_bugs         = metrics["open_bugs"],
+        all_bugs          = metrics["all_bugs"],
+        bugs_closed_total = bugs_closed_total,
+        bug_resolution    = round(bugs_closed_total / metrics["all_bugs"] * 100) if metrics["all_bugs"] else 0,
+        avg_cycle         = f"{metrics['avg_cycle']}d" if has_cycle else "—",
+        med_cycle         = f"{metrics['med_cycle']}d" if has_cycle else "—",
+        p85_cycle         = f"{metrics['p85_cycle']}d" if has_cycle else "—",
+        cycle_color       = "amber" if has_cycle else "muted",
+        cycle_disclaimer  = "· baseado em CreatedDate → ChangedDate (itens Closed)" if has_cycle else "",
+        cycle_note        = "" if has_cycle else '<div class="note">⚠️ Lead time não calculado: nenhum item Closed tinha datas suficientes.</div>',
+        storytelling      = storytelling_html,
+        data_json         = json.dumps(metrics, ensure_ascii=False),
     )
-    with open(ARQUIVO_HTML, "w", encoding="utf-8") as f:
-        f.write(html)
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -737,7 +716,9 @@ def main():
 
     storytelling_html = generate_storytelling(metrics, used_team)
 
-    generate_html(used_team, iterations, metrics, storytelling_html)
+    html = generate_html(used_team, iterations, metrics, storytelling_html)
+    with open(ARQUIVO_HTML, "w", encoding="utf-8") as f:
+        f.write(html)
     print(f"\n✅ Relatório gerado: {os.path.abspath(ARQUIVO_HTML)}")
     if OPEN_BROWSER:
         webbrowser.open(f"file://{os.path.abspath(ARQUIVO_HTML)}")
