@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_head %}
+<meta http-equiv="refresh" content="300">
+<style>
+  /* ── Sprint info cards ── */
+  .sprint-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 1.5rem;
+  }
+  .info-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+  }
+  .info-label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 4px; }
+  .info-value { font-size: 20px; font-weight: 700; color: var(--text); }
+  .info-sub   { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* ── Barras de progresso ── */
+  .progress-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+  @media (max-width: 600px) { .progress-section { grid-template-columns: 1fr; } }
+  .prog-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .prog-label strong { color: var(--text); }
+  .prog-track { background: var(--border); border-radius: 99px; height: 10px; overflow: hidden; }
+  .prog-bar   { height: 100%; border-radius: 99px; transition: width .4s ease; }
+  .prog-time  .prog-bar { background: var(--blue); }
+  .prog-items .prog-bar { background: var(--green); }
+
+  /* ── Kanban ── */
+  .kanban {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    align-items: start;
+  }
+  @media (max-width: 800px) { .kanban { grid-template-columns: 1fr; } }
+
+  .column {
+    background: var(--surface-2);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .col-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .75rem 1rem;
+    font-size: 13px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
+  }
+  .col-todo       { color: var(--blue);  }
+  .col-inprogress { color: var(--amber); }
+  .col-done       { color: var(--green); }
+  .col-count {
+    background: var(--border);
+    border-radius: 99px;
+    padding: 1px 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+  }
+  .col-body { padding: .75rem; display: flex; flex-direction: column; gap: 8px; min-height: 80px; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: .875rem 1rem;
+    transition: border-color .15s;
+  }
+  .card:hover { border-color: var(--accent); }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .tag { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 2px 7px; border-radius: 4px; }
+  .tag-story { background: rgba(124,111,255,.15); color: #9d8fff; }
+  .tag-bug   { background: rgba(240, 74, 74,.15); color: #f87272; }
+  .card-id    { font-size: 11px; color: var(--muted); }
+  .card-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 10px; line-height: 1.4; }
+  .card-footer { display: flex; align-items: center; gap: 6px; }
+  .avatar {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; flex-shrink: 0;
+  }
+  .assignee-name { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .empty-col { font-size: 12px; color: var(--muted); text-align: center; padding: 1.5rem 0; }
+
+  /* ── Search ── */
+  .search-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 1.25rem;
+    position: relative;
+  }
+  .search-input {
+    flex: 1;
+    max-width: 420px;
+    padding: .55rem .75rem .55rem 2.25rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .search-input::placeholder { color: var(--muted); }
+  .search-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(124,111,255,.2);
+  }
+  .search-icon {
+    position: absolute;
+    left: 10px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    pointer-events: none;
+    font-size: 14px;
+  }
+  .search-clear {
+    display: none;
+    align-items: center; justify-content: center;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--muted); color: var(--bg);
+    border: none; cursor: pointer;
+    font-size: 12px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .search-results { font-size: 12px; color: var(--muted); margin-left: 4px; }
+  .card.hidden { display: none; }
+
+  /* ── Footer ── */
+  .page-footer { margin-top: 2rem; font-size: 12px; color: var(--muted); text-align: center; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div style="margin-bottom:2rem">
+  <div style="font-size:22px;font-weight:700">{{ page_title }}</div>
+  <div style="color:var(--muted);font-size:13px;margin-top:4px">
+    Atualizado em {{ now_str }} &nbsp;·&nbsp; Atualiza automaticamente a cada 5 minutos
+  </div>
+</div>
+
+<div class="sprint-row">
+  <div class="info-card">
+    <div class="info-label">Sprint atual</div>
+    <div class="info-value" style="font-size:16px">{{ sprint_name }}</div>
+  </div>
+  <div class="info-card">
+    <div class="info-label">Início</div>
+    <div class="info-value">{{ start_date }}</div>
+  </div>
+  <div class="info-card">
+    <div class="info-label">Fim</div>
+    <div class="info-value">{{ end_date }}</div>
+  </div>
+  <div class="info-card">
+    <div class="info-label">Prazo</div>
+    <div class="info-value">{{ days_left_label }}</div>
+  </div>
+  <div class="info-card">
+    <div class="info-label">Concluídas</div>
+    <div class="info-value">
+      {{ done_items }} <span style="font-size:14px;color:var(--muted)">/ {{ total_items }}</span>
+    </div>
+    <div class="info-sub">demandas entregues</div>
+  </div>
+</div>
+
+<div class="progress-section">
+  <div class="prog-time">
+    <div class="prog-label">
+      <span>Progresso da sprint (tempo)</span>
+      <strong>{{ pct_time }}%</strong>
+    </div>
+    <div class="prog-track">
+      <div class="prog-bar" style="width:{{ pct_time }}%"></div>
+    </div>
+  </div>
+  <div class="prog-items">
+    <div class="prog-label">
+      <span>Demandas concluídas</span>
+      <strong>{{ pct_done }}%</strong>
+    </div>
+    <div class="prog-track">
+      <div class="prog-bar" style="width:{{ pct_done }}%"></div>
+    </div>
+  </div>
+</div>
+
+<div class="search-bar">
+  <span class="search-icon">&#128269;</span>
+  <input
+    id="search-input"
+    class="search-input"
+    type="search"
+    placeholder="Buscar por título, #ID ou responsável…"
+    autocomplete="off"
+  >
+  <button id="search-clear" class="search-clear" title="Limpar busca">&#x2715;</button>
+  <span id="search-results" class="search-results"></span>
+</div>
+
+<div class="kanban">
+  {% for col in columns %}
+  <div class="column">
+    <div class="col-header {{ col.css_class }}">
+      <span>{{ col.title }}</span>
+      <span class="col-count">{{ col.cards | length }}</span>
+    </div>
+    <div class="col-body">
+      {% if col.cards %}
+        {% for card in col.cards %}
+        <div class="card" data-search="#{{ card.id }} {{ card.title | lower }} {{ card.assignee | lower }}">
+          <div class="card-header">
+            <span class="tag {{ 'tag-bug' if card.type == 'Bug' else 'tag-story' }}">
+              {{ 'Bug' if card.type == 'Bug' else 'User Story' }}
+            </span>
+            <span class="card-id">#{{ card.id }}</span>
+          </div>
+          <div class="card-title">{{ card.title }}</div>
+          <div class="card-footer">
+            <span class="avatar" title="{{ card.assignee }}">{{ card.assignee[0] | upper }}</span>
+            <span class="assignee-name">{{ card.assignee }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-col">Nenhuma demanda aqui</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="page-footer">
+  Projeto: {{ projeto }} &nbsp;·&nbsp; Time: {{ team }}
+</div>
+
+<script>
+  (function () {
+    const input     = document.getElementById('search-input');
+    const clearBtn  = document.getElementById('search-clear');
+    const resultsEl = document.getElementById('search-results');
+
+    function applyFilter() {
+      const query = input.value.trim().toLowerCase();
+      clearBtn.style.display = query ? 'flex' : 'none';
+
+      let totalVisible = 0;
+      let totalCards   = 0;
+
+      document.querySelectorAll('.column').forEach(function (col) {
+        const cards = col.querySelectorAll('.card');
+        const body  = col.querySelector('.col-body');
+        let visible = 0;
+
+        cards.forEach(function (card) {
+          const match = !query || card.dataset.search.includes(query);
+          card.classList.toggle('hidden', !match);
+          if (match) visible++;
+        });
+
+        totalVisible += visible;
+        totalCards   += cards.length;
+
+        const countEl = col.querySelector('.col-count');
+        if (countEl) {
+          countEl.textContent = query ? visible + '/' + cards.length : cards.length;
+        }
+
+        let emptySearch = body.querySelector('.empty-search');
+        if (visible === 0 && query) {
+          if (!emptySearch) {
+            emptySearch = document.createElement('div');
+            emptySearch.className = 'empty-col empty-search';
+            emptySearch.textContent = 'Nenhum resultado';
+            body.appendChild(emptySearch);
+          }
+          emptySearch.style.display = '';
+        } else if (emptySearch) {
+          emptySearch.style.display = 'none';
+        }
+      });
+
+      resultsEl.textContent = query
+        ? totalVisible + ' de ' + totalCards + ' demanda' + (totalCards !== 1 ? 's' : '')
+        : '';
+    }
+
+    input.addEventListener('input', applyFilter);
+    clearBtn.addEventListener('click', function () {
+      input.value = '';
+      applyFilter();
+      input.focus();
+    });
+  })();
+</script>
+
+{% endblock %}

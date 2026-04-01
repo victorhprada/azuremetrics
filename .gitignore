@@ -10,4 +10,5 @@ __pycache__/
 venv/
 
 relatorio_devops.html
-status_page.html
+# HTML gerado na raiz pelo CLI (não confundir com templates/status_page.html)
+/status_page.html
