@@ -2,6 +2,12 @@
 
 {% block title %}DevOps Metrics · {{ projeto }}{% endblock %}
 
+{% block nav_actions %}
+{% if show_back_to_picker %}
+<a href="{{ metrics_picker_url }}" class="nav-cta">Voltar para selecao de sprint</a>
+{% endif %}
+{% endblock %}
+
 {% block extra_head %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
@@ -52,6 +58,12 @@ tr:last-child td { border-bottom:none }
 {% endblock %}
 
 {% block content %}
+
+{% if show_back_to_picker %}
+<div style="margin-bottom:12px">
+  <a href="{{ metrics_picker_url }}" class="nav-cta">Voltar para selecao de sprint</a>
+</div>
+{% endif %}
 
 <h1>{{ projeto }} <span style="font-weight:400;font-size:18px;color:var(--muted)">/ {{ team }}</span></h1>
 <div class="sub">Gerado em {{ gerado }} · {{ num_sprints }} sprint(s) · {{ total_items }} items (User Story + Bug)</div>

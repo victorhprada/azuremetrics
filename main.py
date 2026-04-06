@@ -724,7 +724,14 @@ Object.entries(DATA.assignee_map).slice(0,20).forEach(([name,v])=>{{
 del _REMOVED_START  # template migrado para templates/metrics.html
 
 
-def generate_html(team_name, iterations, metrics, storytelling_html) -> str:
+def generate_html(
+    team_name,
+    iterations,
+    metrics,
+    storytelling_html,
+    show_back_to_picker: bool = False,
+    metrics_picker_url: str = "/metrics",
+) -> str:
     """Renderiza o relatório de métricas via template Jinja2 e retorna o HTML."""
     sc                = metrics["scope_data"][0] if metrics["scope_data"] else {}
     has_cycle         = metrics["has_cycle"]
@@ -732,6 +739,8 @@ def generate_html(team_name, iterations, metrics, storytelling_html) -> str:
 
     return _jinja.get_template("metrics.html").render(
         active_page       = "metrics",
+        show_back_to_picker = show_back_to_picker,
+        metrics_picker_url  = metrics_picker_url,
         projeto           = PROJETO,
         team              = team_name,
         gerado            = datetime.now().strftime("%d/%m/%Y %H:%M"),

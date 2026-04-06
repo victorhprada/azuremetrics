@@ -30,7 +30,6 @@ from status_page import (
     TEAM,
 )
 from main import (
-    PROJETO,
     NUM_SPRINTS,
     compute,
     fetch_iterations,
@@ -155,7 +154,14 @@ def metrics_page():
 
         metrics = compute(iterations, work_items)
         storytelling_html = generate_storytelling(metrics, used_team)
-        html = generate_html(used_team, iterations, metrics, storytelling_html)
+        html = generate_html(
+            used_team,
+            iterations,
+            metrics,
+            storytelling_html,
+            show_back_to_picker=True,
+            metrics_picker_url="/metrics",
+        )
         return Response(html, mimetype="text/html")
     except Exception as exc:
         return _err(f"Erro ao buscar métricas:\n\n{exc}")

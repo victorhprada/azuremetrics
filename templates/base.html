@@ -65,6 +65,8 @@
   }
   .nav-divider { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; }
   .nav-links { display: flex; gap: 2px; }
+  .nav-spacer { flex: 1; }
+  .nav-actions { display: flex; align-items: center; gap: 8px; }
   .nav-link {
     padding: 5px 12px;
     border-radius: 6px;
@@ -76,6 +78,20 @@
   }
   .nav-link:hover  { background: var(--surface-2); color: var(--text); }
   .nav-link.active { background: var(--surface-2); color: var(--text); font-weight: 500; }
+  .nav-cta {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text);
+    text-decoration: none;
+    font-size: 12px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .nav-cta:hover { border-color: #3b3b4a; }
 
   /* ── Page wrapper ── */
   .page { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
@@ -92,6 +108,10 @@
   <div class="nav-links">
     <a href="/"        class="nav-link {% if active_page == 'status'  %}active{% endif %}">Status da Sprint</a>
     <a href="/metrics" class="nav-link {% if active_page == 'metrics' %}active{% endif %}">Relatório de Métricas</a>
+  </div>
+  <div class="nav-spacer"></div>
+  <div class="nav-actions">
+    {% block nav_actions %}{% endblock %}
   </div>
 </nav>
 

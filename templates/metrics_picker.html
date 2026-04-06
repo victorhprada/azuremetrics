@@ -2,22 +2,105 @@
 
 {% block title %}Selecionar sprint · {{ projeto }}{% endblock %}
 
+{% block extra_head %}
+<style>
+.picker-head { margin-bottom: 1.1rem; }
+.picker-title { font-size: 28px; font-weight: 700; letter-spacing: -0.4px; }
+.picker-sub {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 14px;
+  max-width: 920px;
+}
+.picker-toolbar { margin-bottom: 1rem; }
+.picker-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+}
+.picker-cta:hover { border-color: #3b3b4a; }
+.picker-table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.16);
+}
+.picker-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.picker-table thead tr { background: #14141b; }
+.picker-table th {
+  text-align: left;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.picker-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.picker-table tr:last-child td { border-bottom: none; }
+.picker-table tbody tr:hover { background: #1a1a23; }
+.sprint-name {
+  display: block;
+  font-size: 18px;
+  line-height: 1.2;
+  font-weight: 650;
+  color: var(--text);
+}
+.date-cell { color: var(--muted); white-space: nowrap; }
+.row-action { text-align: right; width: 160px; }
+.open-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 104px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid #3a3a4a;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 600;
+}
+.open-link:hover { border-color: var(--accent); color: #d8d0ff; }
+.empty { color: var(--muted); text-align: center; padding: 16px; }
+@media (max-width: 900px) {
+  .picker-title { font-size: 24px; }
+  .sprint-name { font-size: 16px; }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<h1 style="font-size:22px;font-weight:700;margin-bottom:4px">Relatório de métricas</h1>
-<p class="sub" style="color:var(--muted);margin-bottom:1.5rem">
-  Escolha a sprint <strong>âncora</strong>: o relatório inclui essa sprint e até
-  <strong>{{ num_sprints - 1 }}</strong> sprint(s) mais antigas (total até <strong>{{ num_sprints }}</strong>,
-  conforme <code>AZURE_DEVOPS_NUM_SPRINTS</code>).
-</p>
+<div class="picker-head">
+  <h1 class="picker-title">Relatorio de metricas</h1>
+  <p class="picker-sub">
+    Escolha a sprint <strong>ancora</strong>: o relatorio inclui essa sprint e ate
+    <strong>{{ num_sprints - 1 }}</strong> sprint(s) mais antigas (total ate <strong>{{ num_sprints }}</strong>,
+    conforme <code>AZURE_DEVOPS_NUM_SPRINTS</code>).
+  </p>
+</div>
 
-<p style="margin-bottom:1rem">
-  <a href="{{ url_for('metrics_page', latest=1) }}" class="nav-link" style="display:inline-block;background:var(--surface-2);border:1px solid var(--border)">
-    Usar as {{ num_sprints }} sprint(s) mais recentes (padrão)
+<div class="picker-toolbar">
+  <a href="{{ url_for('metrics_page', latest=1) }}" class="picker-cta">
+    Usar as {{ num_sprints }} sprint(s) mais recentes (padrao)
   </a>
-</p>
+</div>
 
-<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
-  <table>
+<div class="picker-table-wrap">
+  <table class="picker-table">
     <thead>
       <tr>
         <th>Sprint</th>
@@ -29,16 +112,16 @@
     <tbody>
       {% for s in sprints %}
       <tr>
-        <td>{{ s.name }}</td>
-        <td style="color:var(--muted);white-space:nowrap">{{ s.start }}</td>
-        <td style="color:var(--muted);white-space:nowrap">{{ s.end }}</td>
-        <td style="text-align:right">
-          <a href="{{ url_for('metrics_page', path=s.path) }}" class="nav-link" style="display:inline-block">Ver relatório</a>
+        <td><span class="sprint-name">{{ s.name }}</span></td>
+        <td class="date-cell">{{ s.start }}</td>
+        <td class="date-cell">{{ s.end }}</td>
+        <td class="row-action">
+          <a href="{{ url_for('metrics_page', path=s.path) }}" class="open-link">Ver relatorio</a>
         </td>
       </tr>
       {% else %}
       <tr>
-        <td colspan="4" style="color:var(--muted)">Nenhuma sprint com datas encontrada.</td>
+        <td colspan="4" class="empty">Nenhuma sprint com datas encontrada.</td>
       </tr>
       {% endfor %}
     </tbody>
