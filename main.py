@@ -11,13 +11,14 @@ Requisitos:
 Como usar:
     1. Configure variáveis de ambiente (AZURE_DEVOPS_PAT e GEMINI_API_KEY)
     2. Edite as configurações abaixo (ORGANIZACAO, PROJETO, TEAM...)
-    3. Execute:  python main.py
+    3. Execute:  python main.py  (ou --list-sprints / --sprint-path PATH)
     4. Abra o arquivo  relatorio_devops.html  gerado na mesma pasta
 
 Chave gratuita do Gemini:
     https://aistudio.google.com/app/apikey
 """
 
+import argparse
 import importlib
 import json
 import os
@@ -25,6 +26,7 @@ import sys
 import webbrowser
 from datetime import datetime
 from collections import defaultdict
+from urllib.parse import unquote
 
 try:
     import requests
@@ -138,6 +140,86 @@ def fetch_iterations(team_name):
     raise RuntimeError(
         "Nenhuma sprint encontrada. Verifique PROJETO, TEAM e permissões do PAT."
     )
+
+
+def select_iterations_for_metrics(
+    all_iters: list,
+    sprint_path: str | None,
+    num_sprints: int,
+) -> list:
+    """
+    Retorna iterações em ordem cronológica (mais antiga primeiro) para o relatório.
+
+    Sem sprint_path: equivalente ao comportamento antigo — as num_sprints mais recentes.
+    Com sprint_path: âncora na sprint indicada (match exato em ``path``) e inclui
+    até num_sprints - 1 sprints mais antigas.
+    """
+    with_dates = [i for i in all_iters if i.get("attributes", {}).get("startDate")]
+    if not with_dates:
+        raise ValueError("Nenhuma sprint com data de início encontrada.")
+    sorted_newest = sorted(
+        with_dates,
+        key=lambda i: i["attributes"]["startDate"],
+        reverse=True,
+    )
+    if not (sprint_path and str(sprint_path).strip()):
+        chunk = sorted_newest[:num_sprints]
+        return list(reversed(chunk))
+
+    wanted = unquote(str(sprint_path).strip())
+    k = None
+    for idx, it in enumerate(sorted_newest):
+        if it.get("path") == wanted:
+            k = idx
+            break
+    if k is None:
+        raise ValueError(
+            f"Sprint não encontrada para o path {wanted!r}. "
+            "Use python main.py --list-sprints para listar os paths exatos."
+        )
+    chunk = sorted_newest[k : k + num_sprints]
+    return list(reversed(chunk))
+
+
+def print_sprint_list(all_iters: list) -> None:
+    """Imprime sprints (mais recente primeiro) com path para uso em --sprint-path."""
+    with_dates = [i for i in all_iters if i.get("attributes", {}).get("startDate")]
+    if not with_dates:
+        print("Nenhuma sprint com data de início.")
+        return
+    sorted_newest = sorted(
+        with_dates,
+        key=lambda i: i["attributes"]["startDate"],
+        reverse=True,
+    )
+    print("\nSprints (mais recente primeiro). Use --sprint-path com o path exato:\n")
+    for it in sorted_newest:
+        attrs = it.get("attributes") or {}
+        start = attrs.get("startDate", "")[:10]
+        end = (attrs.get("finishDate") or "")[:10] or "—"
+        path = it.get("path", "")
+        name = it.get("name", "")
+        print(f"  • {name}")
+        print(f"    início: {start}  fim: {end}")
+        print(f"    path: {path}\n")
+
+
+def parse_cli_args():
+    p = argparse.ArgumentParser(
+        description="Gera relatório HTML de métricas do Azure DevOps.",
+    )
+    p.add_argument(
+        "--list-sprints",
+        action="store_true",
+        help="Lista sprints e paths (para --sprint-path) e encerra.",
+    )
+    p.add_argument(
+        "--sprint-path",
+        default=None,
+        metavar="PATH",
+        help="Path da sprint âncora (veja --list-sprints). Sobrescreve AZURE_DEVOPS_ITERATION_PATH.",
+    )
+    return p.parse_args()
 
 
 # ── 3. Buscar work items ──────────────────────────────────────────────────────
@@ -677,6 +759,8 @@ def generate_html(team_name, iterations, metrics, storytelling_html) -> str:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
+    args = parse_cli_args()
+
     if not PAT:
         print("❌ Configure AZURE_DEVOPS_PAT na sua variável de ambiente.")
         print("   Exemplo (macOS/Linux): export AZURE_DEVOPS_PAT='seu_token'")
@@ -686,13 +770,25 @@ def main():
     print(f"   Tipos de item: {TIPOS_BOARD}")
 
     team_name = find_team()
-
-    print(f"  Buscando as últimas {NUM_SPRINTS} sprint(s)...")
     used_team, all_iters = fetch_iterations(team_name)
 
-    with_dates   = [i for i in all_iters if i.get("attributes", {}).get("startDate")]
-    sorted_iters = sorted(with_dates, key=lambda i: i["attributes"]["startDate"], reverse=True)
-    iterations   = list(reversed(sorted_iters[:NUM_SPRINTS]))
+    if args.list_sprints:
+        print_sprint_list(all_iters)
+        return
+
+    raw_path = (args.sprint_path or os.getenv("AZURE_DEVOPS_ITERATION_PATH") or "").strip()
+    sprint_path = raw_path or None
+
+    try:
+        iterations = select_iterations_for_metrics(all_iters, sprint_path, NUM_SPRINTS)
+    except ValueError as err:
+        print(f"❌ {err}")
+        sys.exit(1)
+
+    if sprint_path:
+        print(f"  Âncora: path selecionado + até {NUM_SPRINTS} sprint(s) (incluindo mais antigas).")
+    else:
+        print(f"  Buscando as últimas {NUM_SPRINTS} sprint(s)...")
 
     print(f"  Sprints selecionadas: {', '.join(i['name'] for i in iterations)}")
 

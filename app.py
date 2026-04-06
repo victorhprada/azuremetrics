@@ -7,14 +7,16 @@ Local:
 
 Rotas:
     /          →  Status da sprint (kanban, atualiza a cada 5 min)
-    /metrics   →  Relatório de métricas (throughput, bugs, scope increase…)
+    /metrics   →  Lista sprints para escolher a âncora do relatório
+    /metrics?latest=1 →  Últimas N sprints (padrão; N = AZURE_DEVOPS_NUM_SPRINTS)
+    /metrics?path=... →  Relatório ancorado na sprint (path exato da API)
 
 Vercel:
     Sobe automaticamente ao fazer deploy (ver vercel.json).
     Configure as variáveis de ambiente no painel da Vercel.
 """
 
-from flask import Flask, Response
+from flask import Flask, Response, render_template, request
 
 from status_page import (
     fetch_current_sprint,
@@ -28,13 +30,15 @@ from status_page import (
     TEAM,
 )
 from main import (
-    find_team,
+    PROJETO,
+    NUM_SPRINTS,
+    compute,
     fetch_iterations,
     fetch_work_items,
-    compute,
-    generate_storytelling,
+    find_team,
     generate_html,
-    NUM_SPRINTS,
+    generate_storytelling,
+    select_iterations_for_metrics,
 )
 
 app = Flask(__name__)
@@ -70,6 +74,26 @@ def _err(msg: str, status: int = 500) -> Response:
     )
 
 
+def _picker_rows(all_iters: list) -> list[dict]:
+    """Linhas para o template: name, start, end, path (bruto; url_for codifica a query)."""
+    with_dates = [i for i in all_iters if i.get("attributes", {}).get("startDate")]
+    sorted_newest = sorted(
+        with_dates,
+        key=lambda i: i["attributes"]["startDate"],
+        reverse=True,
+    )
+    rows = []
+    for it in sorted_newest:
+        attrs = it.get("attributes") or {}
+        rows.append({
+            "name": it.get("name", ""),
+            "start": (attrs.get("startDate") or "")[:10],
+            "end": (attrs.get("finishDate") or "")[:10] or "—",
+            "path": it.get("path") or "",
+        })
+    return rows
+
+
 @app.route("/")
 def index():
     env_err = _azure_env_error_msg()
@@ -95,20 +119,43 @@ def metrics_page():
     if env_err:
         return _err(env_err)
     try:
-        team_name        = find_team()
+        team_name = find_team()
         used_team, all_iters = fetch_iterations(team_name)
 
-        with_dates   = [i for i in all_iters if i.get("attributes", {}).get("startDate")]
-        sorted_iters = sorted(with_dates, key=lambda i: i["attributes"]["startDate"], reverse=True)
-        iterations   = list(reversed(sorted_iters[:NUM_SPRINTS]))
+        raw_path = request.args.get("path")
+        use_latest = request.args.get("latest", "").lower() in ("1", "true", "yes")
+
+        # Sem path e sem latest → página para escolher sprint
+        if raw_path is None and not use_latest:
+            rows = _picker_rows(all_iters)
+            html = render_template(
+                "metrics_picker.html",
+                active_page="metrics",
+                projeto=PROJETO,
+                num_sprints=NUM_SPRINTS,
+                sprints=rows,
+            )
+            return Response(html, mimetype="text/html")
+
+        # latest=1 ou path vazio explícito → últimas N (comportamento padrão)
+        sprint_path = None
+        if raw_path is not None and str(raw_path).strip():
+            sprint_path = str(raw_path).strip()
+
+        try:
+            iterations = select_iterations_for_metrics(
+                all_iters, sprint_path, NUM_SPRINTS
+            )
+        except ValueError as err:
+            return _err(str(err), status=400)
 
         work_items = fetch_work_items(iterations)
         if not work_items:
             return _err("Nenhum work item encontrado para a(s) sprint(s) selecionada(s).")
 
-        metrics          = compute(iterations, work_items)
+        metrics = compute(iterations, work_items)
         storytelling_html = generate_storytelling(metrics, used_team)
-        html             = generate_html(used_team, iterations, metrics, storytelling_html)
+        html = generate_html(used_team, iterations, metrics, storytelling_html)
         return Response(html, mimetype="text/html")
     except Exception as exc:
         return _err(f"Erro ao buscar métricas:\n\n{exc}")

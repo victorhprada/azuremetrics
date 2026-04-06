@@ -41,6 +41,10 @@ Visão do dia a dia para toda a empresa.
 ### Relatório de Métricas `/metrics`
 Visão analítica para o time e liderança técnica.
 
+- **`/metrics`** (sem query): página para **escolher a sprint âncora**; cada link gera o relatório usando essa sprint e até `AZURE_DEVOPS_NUM_SPRINTS - 1` sprints **mais antigas** (mesma lógica das “últimas N”, mas ancorada na sprint escolhida).
+- **`/metrics?latest=1`**: atalho para o comportamento antigo — as **N sprints mais recentes**.
+- **CLI** (`main.py`): `python main.py --list-sprints` lista nomes e **paths**; `python main.py --sprint-path "Wiipo\\Sprint 3"` (ou variável `AZURE_DEVOPS_ITERATION_PATH`) fixa a âncora ao gerar `relatorio_devops.html`.
+
 | Métrica | O que mede |
 |---|---|
 | **Throughput** | Itens entregues por sprint |
@@ -108,6 +112,9 @@ AZURE_DEVOPS_PAT=seu-pat-aqui
 # Quantas sprints analisar no relatório de métricas (padrão: 1)
 AZURE_DEVOPS_NUM_SPRINTS=3
 
+# Opcional: path exato da sprint âncora (veja: python main.py --list-sprints)
+# AZURE_DEVOPS_ITERATION_PATH=Wiipo\Sprint 3 - Março
+
 # Google Gemini — opcional (narrativa automática no relatório)
 GEMINI_API_KEY=
 
@@ -129,7 +136,7 @@ STATUS_PAGE_TITLE=Status da Sprint — Meu Time
 python app.py
 ```
 
-Acesse `http://localhost:5000` — as duas páginas já estão disponíveis com navegação entre elas.
+Acesse `http://localhost:5000` — Status em `/` e relatório em `/metrics` (com seletor de sprint). Para gerar só o HTML em arquivo: `python main.py` ou `python main.py --list-sprints` / `--sprint-path`.
 
 ---
 
@@ -197,6 +204,7 @@ azuremetrics/
 ├── templates/
 │   ├── base.html       # Layout base: design tokens, navegação
 │   ├── status_page.html
+│   ├── metrics_picker.html  # escolha da sprint para /metrics
 │   └── metrics.html
 ├── .env.example
 ├── requirements.txt

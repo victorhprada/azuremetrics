@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Selecionar sprint · {{ projeto }}{% endblock %}
+
+{% block content %}
+<h1 style="font-size:22px;font-weight:700;margin-bottom:4px">Relatório de métricas</h1>
+<p class="sub" style="color:var(--muted);margin-bottom:1.5rem">
+  Escolha a sprint <strong>âncora</strong>: o relatório inclui essa sprint e até
+  <strong>{{ num_sprints - 1 }}</strong> sprint(s) mais antigas (total até <strong>{{ num_sprints }}</strong>,
+  conforme <code>AZURE_DEVOPS_NUM_SPRINTS</code>).
+</p>
+
+<p style="margin-bottom:1rem">
+  <a href="{{ url_for('metrics_page', latest=1) }}" class="nav-link" style="display:inline-block;background:var(--surface-2);border:1px solid var(--border)">
+    Usar as {{ num_sprints }} sprint(s) mais recentes (padrão)
+  </a>
+</p>
+
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+  <table>
+    <thead>
+      <tr>
+        <th>Sprint</th>
+        <th>Início</th>
+        <th>Fim</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in sprints %}
+      <tr>
+        <td>{{ s.name }}</td>
+        <td style="color:var(--muted);white-space:nowrap">{{ s.start }}</td>
+        <td style="color:var(--muted);white-space:nowrap">{{ s.end }}</td>
+        <td style="text-align:right">
+          <a href="{{ url_for('metrics_page', path=s.path) }}" class="nav-link" style="display:inline-block">Ver relatório</a>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="4" style="color:var(--muted)">Nenhuma sprint com datas encontrada.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
