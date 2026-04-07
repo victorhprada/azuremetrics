@@ -84,6 +84,20 @@ tr:last-child td { border-bottom:none }
       <div class="card-sub">{{ total_done }} concluídos ({{ pct_done }}%)</div>
     </div>
     <div class="card">
+      <div class="card-label">Capacidade da squad</div>
+      <div class="card-value green">{{ avg_capacity }}</div>
+      <div class="card-sub">
+        cards/sprint (média)
+        {% if capacity_trend == 'up' %}
+        · <span style="color:var(--green)">↑ {{ capacity_trend_pct }}%</span>
+        {% elif capacity_trend == 'down' %}
+        · <span style="color:var(--red)">↓ {{ capacity_trend_pct | abs }}%</span>
+        {% else %}
+        · <span style="color:var(--muted)">— estável</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="card">
       <div class="card-label">Scope increase</div>
       <div class="card-value orange">{{ scope_count }}</div>
       <div class="card-sub">adicionados após início · {{ scope_done }} concluídos</div>
@@ -119,6 +133,18 @@ tr:last-child td { border-bottom:none }
   <div class="chart-box">
     <h3>Items concluídos vs total na sprint</h3>
     <div class="canvas-wrap" style="height:220px"><canvas id="c-thru"></canvas></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Capacidade da squad — cards resolvidos por sprint</div>
+  <div class="chart-box">
+    <h3>Capacidade: cards concluídos por sprint (tendência)</h3>
+    <div class="canvas-wrap" style="height:220px"><canvas id="c-capacity"></canvas></div>
+    <div style="margin-top:12px;overflow-x:auto">
+      <table><thead><tr><th>Sprint</th><th>Cards resolvidos</th><th>Por pessoa (média)</th></tr></thead>
+      <tbody id="capacity-tbody"></tbody></table>
+    </div>
   </div>
 </div>
 
@@ -192,6 +218,65 @@ new Chart(document.getElementById('c-thru'),{
   ]},
   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:C.mut,font:{size:11}}}},scales:{x:{grid:GRID,ticks:TICK},y:{grid:GRID,ticks:TICK,beginAtZero:true}}}
 });
+
+// Capacity chart
+const capChart = document.getElementById('c-capacity');
+if(capChart && DATA.capacity_per_sprint && DATA.capacity_per_sprint.length > 0){
+  new Chart(capChart,{
+    type:'line',
+    data:{
+      labels:DATA.capacity_per_sprint.map(c=>c.sprint),
+      datasets:[
+        {
+          label:'Cards resolvidos',
+          data:DATA.capacity_per_sprint.map(c=>c.resolved),
+          borderColor:C.grn,
+          backgroundColor:'rgba(62,207,142,0.1)',
+          fill:true,
+          tension:0.3,
+          pointRadius:5,
+          pointHoverRadius:7,
+          pointBackgroundColor:C.grn,
+        },
+        {
+          label:'Média',
+          data:Array(DATA.capacity_per_sprint.length).fill(DATA.avg_capacity),
+          borderColor:C.amb,
+          borderDash:[5,5],
+          fill:false,
+          pointRadius:0,
+        }
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{labels:{color:C.mut,font:{size:11}}},
+        tooltip:{
+          callbacks:{
+            label:function(ctx){
+              return ctx.dataset.label+': '+ctx.parsed.y+' cards';
+            }
+          }
+        }
+      },
+      scales:{x:{grid:GRID,ticks:TICK},y:{grid:GRID,ticks:TICK,beginAtZero:true}}
+    }
+  });
+}
+
+// Capacity table
+const ct = document.getElementById('capacity-tbody');
+if(DATA.capacity_per_sprint && DATA.capacity_per_sprint.length > 0){
+  const numPeople = Object.keys(DATA.assignee_map || {}).length || 1;
+  DATA.capacity_per_sprint.forEach(c=>{
+    const perPerson = (c.resolved / numPeople).toFixed(1);
+    ct.innerHTML+=`<tr><td>${c.sprint}</td><td style="color:var(--green);font-weight:600">${c.resolved}</td><td style="color:var(--muted)">${perPerson}</td></tr>`;
+  });
+}else{
+  ct.innerHTML='<tr><td colspan="3" style="color:#6b6b80">Sem dados de capacidade.</td></tr>';
+}
 
 // Status
 const sc={Closed:C.grn,Done:C.grn,Resolved:C.grn,Test:C.amb,Ready:C.blu,Active:'#a78bfa',Review:'#f472b6',New:C.mut};

@@ -358,11 +358,47 @@ def compute(iterations, work_items):
 
     scope_data = compute_scope_increase(iterations, work_items)
 
+    # ── Capacity: resolved items per sprint (squad delivery capacity) ──
+    capacity_per_sprint = []
+    for s in sprints:
+        capacity_per_sprint.append({
+            "sprint":   s["name"],
+            "resolved": s["done"],
+        })
+
+    total_resolved = sum(c["resolved"] for c in capacity_per_sprint)
+    avg_capacity = round(total_resolved / len(capacity_per_sprint)) if capacity_per_sprint else 0
+
+    # Capacity trend: compare last sprint vs previous
+    if len(capacity_per_sprint) >= 2:
+        prev = capacity_per_sprint[-2]["resolved"]
+        curr = capacity_per_sprint[-1]["resolved"]
+        if prev > 0:
+            capacity_trend_pct = round((curr - prev) / prev * 100)
+        else:
+            capacity_trend_pct = 100 if curr > 0 else 0
+        capacity_trend = "up" if curr > prev else ("down" if curr < prev else "stable")
+    else:
+        capacity_trend_pct = 0
+        capacity_trend = "stable"
+
+    # Per-person capacity: resolved items per assignee
+    capacity_by_assignee = []
+    for name, v in assignee_map.items():
+        capacity_by_assignee.append({
+            "name":     name,
+            "resolved": v["done"],
+            "total":    v["total"],
+        })
+    capacity_by_assignee.sort(key=lambda x: -x["resolved"])
+
+    total_done = sum(1 for w in work_items if is_done(w["fields"]["System.State"]))
+
     return {
         "sprints":      sprints,
         "scope_data":   scope_data,
         "total_items":  len(work_items),
-        "total_done":   sum(1 for w in work_items if is_done(w["fields"]["System.State"])),
+        "total_done":   total_done,
         "open_bugs":    len(open_bugs),
         "all_bugs":     len(all_bugs),
         "avg_cycle":    round(sum(all_cts) / len(all_cts)) if all_cts else 0,
@@ -382,6 +418,12 @@ def compute(iterations, work_items):
             }
             for w in open_bugs[:30]
         ],
+        # Capacity data
+        "capacity_per_sprint":  capacity_per_sprint,
+        "avg_capacity":         avg_capacity,
+        "capacity_trend":       capacity_trend,
+        "capacity_trend_pct":   capacity_trend_pct,
+        "capacity_by_assignee": capacity_by_assignee,
     }
 
 
@@ -762,6 +804,10 @@ def generate_html(
         cycle_note        = "" if has_cycle else '<div class="note">⚠️ Lead time não calculado: nenhum item Closed tinha datas suficientes.</div>',
         storytelling      = storytelling_html,
         data_json         = json.dumps(metrics, ensure_ascii=False),
+        # Capacity data
+        avg_capacity      = metrics.get("avg_capacity", 0),
+        capacity_trend    = metrics.get("capacity_trend", "stable"),
+        capacity_trend_pct = metrics.get("capacity_trend_pct", 0),
     )
 
 
