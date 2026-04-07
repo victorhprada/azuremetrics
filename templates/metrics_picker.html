@@ -85,17 +85,17 @@
 
 {% block content %}
 <div class="picker-head">
-  <h1 class="picker-title">Relatorio de metricas</h1>
+  <h1 class="picker-title">Relatório de Métricas</h1>
   <p class="picker-sub">
-    Escolha a sprint <strong>ancora</strong>: o relatorio inclui essa sprint e ate
-    <strong>{{ num_sprints - 1 }}</strong> sprint(s) mais antigas (total ate <strong>{{ num_sprints }}</strong>,
+    Escolha a sprint <strong>âncora</strong>: o relatório inclui essa sprint e até
+    <strong>{{ num_sprints - 1 }}</strong> sprint(s) mais antigas (total até <strong>{{ num_sprints }}</strong>,
     conforme <code>AZURE_DEVOPS_NUM_SPRINTS</code>).
   </p>
 </div>
 
 <div class="picker-toolbar">
   <a href="{{ url_for('metrics_page', latest=1) }}" class="picker-cta">
-    Usar as {{ num_sprints }} sprint(s) mais recentes (padrao)
+    Usar as {{ num_sprints }} sprint(s) mais recentes (padrão)
   </a>
 </div>
 
@@ -116,7 +116,7 @@
         <td class="date-cell">{{ s.start }}</td>
         <td class="date-cell">{{ s.end }}</td>
         <td class="row-action">
-          <a href="{{ url_for('metrics_page', path=s.path) }}" class="open-link">Ver relatorio</a>
+          <a href="{{ url_for('metrics_page', path=s.path) }}" class="open-link">Ver relatório</a>
         </td>
       </tr>
       {% else %}

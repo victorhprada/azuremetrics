@@ -445,9 +445,9 @@ Analise os dados abaixo e escreva um storytelling claro, honesto e direto ao pon
 ## Dados da {s.get('name', 'sprint')} — Time {team_name}
 
 **Throughput:**
-- Total de items no board: {s.get('total', 0)} (User Stories + Bugs)
-- Items concluídos (Closed): {s.get('done', 0)} ({pct_done}%)
-- Items ainda em progresso ou não iniciados: {s.get('total', 0) - s.get('done', 0)}
+- Total de itens no board: {s.get('total', 0)} (User Stories + Bugs)
+- Itens concluídos (Closed): {s.get('done', 0)} ({pct_done}%)
+- Itens ainda em progresso ou não iniciados: {s.get('total', 0) - s.get('done', 0)}
 
 **Distribuição por status:**
 {json.dumps(metrics['state_map'], ensure_ascii=False, indent=2)}
@@ -458,7 +458,7 @@ Analise os dados abaixo e escreva um storytelling claro, honesto e direto ao pon
 - Taxa de resolução: {round(s.get('bugs_closed', 0) / metrics['all_bugs'] * 100) if metrics['all_bugs'] else 0}%
 
 **Scope increase (itens adicionados após início da sprint):**
-- Quantidade: {scope_count} items adicionados no meio da sprint
+- Quantidade: {scope_count} itens adicionados no meio da sprint
 - Desses, {scope_done} foram concluídos
 
 **Lead time (itens fechados):**
@@ -589,7 +589,7 @@ tr:last-child td{{border-bottom:none}}
 </head>
 <body>
 <h1>📊 {projeto} <span style="font-weight:400;font-size:18px;color:var(--muted)">/ {team}</span></h1>
-<div class="sub">Gerado em {gerado} · {num_sprints} sprint(s) · {total_items} items (User Story + Bug)</div>
+<div class="sub">Gerado em {gerado} · {num_sprints} sprint(s) · {total_items} itens (User Story + Bug)</div>
 
 {cycle_note}
 
@@ -602,7 +602,7 @@ tr:last-child td{{border-bottom:none}}
   <div class="section-title">Visão geral</div>
   <div class="grid-5">
     <div class="card">
-      <div class="card-label">Items na sprint</div>
+      <div class="card-label">Itens na sprint</div>
       <div class="card-value accent">{total_items}</div>
       <div class="card-sub">{total_done} concluídos ({pct_done}%)</div>
     </div>
@@ -640,7 +640,7 @@ tr:last-child td{{border-bottom:none}}
 <div class="section">
   <div class="section-title">Throughput por sprint</div>
   <div class="chart-box">
-    <h3>Items concluídos vs total na sprint</h3>
+    <h3>Itens concluídos vs total na sprint</h3>
     <div class="canvas-wrap" style="height:220px"><canvas id="c-thru"></canvas></div>
   </div>
 </div>

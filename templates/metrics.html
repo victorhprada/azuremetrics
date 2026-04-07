@@ -4,7 +4,7 @@
 
 {% block nav_actions %}
 {% if show_back_to_picker %}
-<a href="{{ metrics_picker_url }}" class="nav-cta">Voltar para selecao de sprint</a>
+<a href="{{ metrics_picker_url }}" class="nav-cta">Voltar para seleção de sprint</a>
 {% endif %}
 {% endblock %}
 
@@ -61,12 +61,12 @@ tr:last-child td { border-bottom:none }
 
 {% if show_back_to_picker %}
 <div style="margin-bottom:12px">
-  <a href="{{ metrics_picker_url }}" class="nav-cta">Voltar para selecao de sprint</a>
+  <a href="{{ metrics_picker_url }}" class="nav-cta">Voltar para seleção de sprint</a>
 </div>
 {% endif %}
 
 <h1>{{ projeto }} <span style="font-weight:400;font-size:18px;color:var(--muted)">/ {{ team }}</span></h1>
-<div class="sub">Gerado em {{ gerado }} · {{ num_sprints }} sprint(s) · {{ total_items }} items (User Story + Bug)</div>
+<div class="sub">Gerado em {{ gerado }} · {{ num_sprints }} sprint(s) · {{ total_items }} itens (User Story + Bug)</div>
 
 {{ cycle_note | safe }}
 
@@ -79,7 +79,7 @@ tr:last-child td { border-bottom:none }
   <div class="section-title">Visão geral</div>
   <div class="grid-5">
     <div class="card">
-      <div class="card-label">Items na sprint</div>
+      <div class="card-label">Itens na sprint</div>
       <div class="card-value accent">{{ total_items }}</div>
       <div class="card-sub">{{ total_done }} concluídos ({{ pct_done }}%)</div>
     </div>
@@ -108,7 +108,7 @@ tr:last-child td { border-bottom:none }
       <div class="card-sub">{{ all_bugs }} total · {{ bugs_closed_total }} fechados</div>
     </div>
     <div class="card">
-      <div class="card-label">Taxa resolução bugs</div>
+      <div class="card-label">Taxa de resolução de bugs</div>
       <div class="card-value amber">{{ bug_resolution }}%</div>
       <div class="card-sub">{{ bugs_closed_total }} de {{ all_bugs }} fechados</div>
     </div>
@@ -131,7 +131,7 @@ tr:last-child td { border-bottom:none }
 <div class="section">
   <div class="section-title">Throughput por sprint</div>
   <div class="chart-box">
-    <h3>Items concluídos vs total na sprint</h3>
+    <h3>Itens concluídos vs total na sprint</h3>
     <div class="canvas-wrap" style="height:220px"><canvas id="c-thru"></canvas></div>
   </div>
 </div>
@@ -310,7 +310,7 @@ new Chart(document.getElementById('c-ct'),{
 });
 new Chart(document.getElementById('c-dist'),{
   type:'bar',
-  data:{labels:Object.keys(DATA.buckets),datasets:[{label:'Items',data:Object.values(DATA.buckets),backgroundColor:['#9FE1CB','#5DCAA5','#1D9E75','#0F6E56','#085041'],borderRadius:4}]},
+  data:{labels:Object.keys(DATA.buckets),datasets:[{label:'Itens',data:Object.values(DATA.buckets),backgroundColor:['#9FE1CB','#5DCAA5','#1D9E75','#0F6E56','#085041'],borderRadius:4}]},
   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:TICK},y:{grid:GRID,ticks:TICK,beginAtZero:true}}}
 });
 
